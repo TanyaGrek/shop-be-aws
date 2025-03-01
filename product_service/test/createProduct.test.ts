@@ -1,6 +1,6 @@
 import { handler } from '../lambdas/createProduct';
 import { mockClient } from "aws-sdk-client-mock";
-import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
+import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient, TransactWriteItemsCommand } from '@aws-sdk/client-dynamodb';
 
 

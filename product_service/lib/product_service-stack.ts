@@ -41,8 +41,6 @@ export class ProductServiceStack extends cdk.Stack {
       handler: "createProduct.handler",
       code: lambda.Code.fromAsset('./lambdas'),
       bundling: {
-        externalModules: ["uuid"],
-        nodeModules: ["uuid"],
         minify: true,
       },
       environment: {
