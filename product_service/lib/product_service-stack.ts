@@ -1,17 +1,27 @@
 import * as cdk from 'aws-cdk-lib';
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+
 import { Construct } from 'constructs';
 
 export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    const productsTable = dynamodb.Table.fromTableName(this, "ProductsTable", "products");
+    const stocksTable = dynamodb.Table.fromTableName(this, "StocksTable", "stocks");
+
     // Get Products List Lambda
     const getProductsList = new lambda.Function(this, 'GetProductsListLambda', {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'getProductsList.handler',
       code: lambda.Code.fromAsset('./lambdas'),
+      environment: {
+        PRODUCTS_TABLE: productsTable.tableName,
+        STOCKS_TABLE: stocksTable.tableName,
+      },
     });
 
     // Get Product By ID Lambda
@@ -19,6 +29,26 @@ export class ProductServiceStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'getProductById.handler',
       code: lambda.Code.fromAsset('./lambdas'),
+      environment: {
+        PRODUCTS_TABLE: productsTable.tableName,
+        STOCKS_TABLE: stocksTable.tableName,
+      },
+    });
+
+    // Create New Product Lambda
+    const createProduct = new NodejsFunction(this, "CreateProductLambda", {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: "createProduct.handler",
+      code: lambda.Code.fromAsset('./lambdas'),
+      bundling: {
+        externalModules: ["uuid"],
+        nodeModules: ["uuid"],
+        minify: true,
+      },
+      environment: {
+        PRODUCTS_TABLE: productsTable.tableName,
+        STOCKS_TABLE: stocksTable.tableName,
+      },
     });
 
     // API Gateway
@@ -44,6 +74,17 @@ export class ProductServiceStack extends cdk.Stack {
           },
         ],
       });
+    productsResource.addMethod("POST", new apigateway.LambdaIntegration(createProduct),
+      {
+        methodResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+            },
+          },
+        ],
+      });
 
     // /products/{productId} endpoint
     const productByIdResource = productsResource.addResource('{productId}');
@@ -58,5 +99,12 @@ export class ProductServiceStack extends cdk.Stack {
           },
         ],
       });
+
+    productsTable.grantReadData(getProductsList);
+    stocksTable.grantReadData(getProductsList);
+    productsTable.grantReadData(getProductById);
+    stocksTable.grantReadData(getProductById);
+    productsTable.grantWriteData(createProduct);
+    stocksTable.grantWriteData(createProduct);
   }
 }
