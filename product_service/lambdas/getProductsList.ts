@@ -1,6 +1,6 @@
 import { DynamoDBClient, ScanCommand } from "@aws-sdk/client-dynamodb";
 import { APIGatewayProxyHandler } from "aws-lambda";
-import { parseProduct, parseStock } from "./utils";
+import { headers, parseProduct, parseStock } from './utils';
 import { Product } from "./types";
 
 const dynamoDB = new DynamoDBClient({ region: "us-east-2" });
@@ -32,12 +32,13 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     return {
       statusCode: 200,
-      headers: { "Access-Control-Allow-Origin": "*" },
+      headers,
       body: JSON.stringify(mergedProducts),
     };
   } catch (error) {
     return {
       statusCode: 500,
+      headers,
       body: JSON.stringify({ message: "Internal Server Error" }),
     };
   }

@@ -4,6 +4,7 @@ import {
 } from '@aws-sdk/client-dynamodb';
 import { APIGatewayProxyHandler } from "aws-lambda";
 import { marshall } from "@aws-sdk/util-dynamodb";
+import { headers } from './utils';
 
 // import { v4 as uuidv4 } from "uuid";
 
@@ -14,24 +15,18 @@ export const handler: APIGatewayProxyHandler = async (event) => {
   try {
     const productsTable = process.env.PRODUCTS_TABLE!;
     const stocksTable = process.env.STOCKS_TABLE!;
-    console.log("Creating....")
 
     if (!event.body) {
       return { statusCode: 400, body: JSON.stringify({ message: "Missing request body" }) };
     }
 
-    console.log("event.body ", event.body)
-
-
     const { title, description, price, count } = JSON.parse(event.body);
 
     if (!title || !description || !price || typeof price !== "number" || !count || typeof count !== "number") {
-      return { statusCode: 400, body: JSON.stringify({ message: "Invalid product data" }) };
+      return { statusCode: 400, headers, body: JSON.stringify({ message: "Invalid product data" }) };
     }
 
     const productId = new Date().getMilliseconds().toString() // uuidv4(); TODO try to fix it
-
-    console.log("productId", productId)
 
     await dynamoDB.send(new TransactWriteItemsCommand({
       TransactItems: [
@@ -61,13 +56,14 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     return {
       statusCode: 201,
-      headers: { "Access-Control-Allow-Origin": "*" },
+      headers,
       body: JSON.stringify({ id: productId, title, description, price, count }),
     };
   } catch (error) {
     console.log("ERROR: ", error)
     return {
       statusCode: 500,
+      headers,
       body: JSON.stringify({ message: "Internal Server Error" }),
     };
   }

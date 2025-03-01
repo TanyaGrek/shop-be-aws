@@ -58,7 +58,12 @@ export class ProductServiceStack extends cdk.Stack {
       restApiName: 'Product Service API',
       deployOptions: {
         stageName: 'dev',
-      }
+      },
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: ["Content-Type"],
+      },
     });
 
     // /products endpoint
