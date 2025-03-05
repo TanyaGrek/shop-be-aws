@@ -1,146 +1,133 @@
-{
-  "openapi": "3.0.0",
-  "info": {
-    "title": "Product Service API",
-    "version": "1.0.0",
-    "description": "API for managing products and their stock in an online store"
-  },
-  "servers": [
-    {
-      "url": "https://m9o1j9daj2.execute-api.us-east-2.amazonaws.com/dev",
-      "description": "AWS API Gateway"
-    }
-  ],
-  "paths": {
-    "/products": {
-      "get": {
-        "summary": "Retrieve a list of products",
-        "operationId": "getProductsList",
-        "tags": ["Products"],
-        "responses": {
-          "200": {
-            "description": "A list of products",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": { "$ref": "#/components/schemas/Product" }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
-      "post": {
-        "summary": "Create a new product",
-        "operationId": "createProduct",
-        "tags": ["Products"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NewProduct"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Product created successfully",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/Product" }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request data",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": { "type": "string", "example": "Invalid product data." }
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/products/{productId}": {
-      "get": {
-        "summary": "Retrieve a product by ID",
-        "operationId": "getProductById",
-        "tags": ["Products"],
-        "parameters": [
-          {
-            "name": "productId",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string" }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Product details",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/Product" }
-              }
-            }
-          },
-          "404": {
-            "description": "Product not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": { "type": "string", "example": "Product not found" }
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    }
-  },
-  "components": {
-    "schemas": {
-      "Product": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string", "example": "e6b8b6c2-8dd5-4d14-98cf-ff85e173d6a8" },
-          "title": { "type": "string", "example": "Wireless Headphones" },
-          "description": { "type": "string", "example": "Noise-canceling over-ear headphones" },
-          "price": { "type": "integer", "example": 199 },
-          "count": { "type": "integer", "example": 10 }
-        },
-        "required": ["id", "title", "description", "price", "count"]
-      },
-      "NewProduct": {
-        "type": "object",
-        "properties": {
-          "title": { "type": "string", "example": "Wireless Keyboard" },
-          "description": { "type": "string", "example": "Bluetooth ergonomic keyboard" },
-          "price": { "type": "integer", "example": 79 },
-          "count": { "type": "integer", "example": 30 }
-        },
-        "required": ["title", "description", "price", "count"]
-      }
-    }
-  }
-}
+openapi: 3.0.0
+info:
+  title: Product Service API
+  version: 1.0.0
+  description: API for managing products and their stock in an online store
+servers:
+  - url: https://m9o1j9daj2.execute-api.us-east-2.amazonaws.com/dev
+    description: AWS API Gateway
+paths:
+  /products:
+    get:
+      summary: Retrieve a list of products
+      operationId: getProductsList
+      tags:
+        - Products
+      responses:
+        '200':
+          description: A list of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        '500':
+          description: Internal Server Error
+    post:
+      summary: Create a new product
+      operationId: createProduct
+      tags:
+        - Products
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewProduct'
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Invalid product data.
+        '500':
+          description: Internal Server Error
+  /products/{productId}:
+    get:
+      summary: Retrieve a product by ID
+      operationId: getProductById
+      tags:
+        - Products
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Product not found
+        '500':
+          description: Internal Server Error
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          example: e6b8b6c2-8dd5-4d14-98cf-ff85e173d6a8
+        title:
+          type: string
+          example: Wireless Headphones
+        description:
+          type: string
+          example: Noise-canceling over-ear headphones
+        price:
+          type: integer
+          example: 199
+        count:
+          type: integer
+          example: 10
+      required:
+        - id
+        - title
+        - description
+        - price
+        - count
+    NewProduct:
+      type: object
+      properties:
+        title:
+          type: string
+          example: Wireless Keyboard
+        description:
+          type: string
+          example: Bluetooth ergonomic keyboard
+        price:
+          type: integer
+          example: 79
+        count:
+          type: integer
+          example: 30
+      required:
+        - title
+        - description
+        - price
+        - count
