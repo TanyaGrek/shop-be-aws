@@ -1,6 +1,11 @@
 import { S3Event, S3Handler } from "aws-lambda";
-import { S3Client, GetObjectCommand, CopyObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
-import csv from "csv-parser";
+import {
+  S3Client,
+  GetObjectCommand,
+  CopyObjectCommand,
+  DeleteObjectCommand
+} from '@aws-sdk/client-s3';
+import * as csv from "csv-parser";
 import { Readable } from "stream";
 import { SdkStreamMixin } from '@smithy/types';
 
@@ -23,7 +28,7 @@ export const handler: S3Handler = async (event: S3Event): Promise<void> => {
         return;
       }
 
-      // ✅ Wrap stream in a Promise to ensure it completes before returning
+      // Wrap stream in a Promise to ensure it completes before returning
       await new Promise<void>((resolve, reject) => {
         const stream = Body as SdkStreamMixin & Readable;
         console.log(`Processing file: ${objectKey}`);
@@ -31,10 +36,20 @@ export const handler: S3Handler = async (event: S3Event): Promise<void> => {
         stream
           .pipe(csv())
           .on("data", (data) => {
-            console.log("Parsed Record:", data); // ✅ Now Jest will capture this log
+            console.log("Parsed Record:", data);
           })
-          .on("end", () => {
+          .on("end", async () => {
             console.log(`File ${objectKey} successfully processed.`);
+            // Copy file to parsed/ folder
+            await s3Client.send(new CopyObjectCommand({
+              Bucket: bucketName,
+              CopySource: `${bucketName}/${objectKey}`,
+              Key: parsedKey,
+            }));
+
+            // Delete original file
+            await s3Client.send(new DeleteObjectCommand({ Bucket: bucketName, Key: objectKey }));
+            console.log(`File moved to ${parsedKey} and deleted from ${objectKey}`);
             resolve();
           })
           .on("error", (err) => {
@@ -42,27 +57,6 @@ export const handler: S3Handler = async (event: S3Event): Promise<void> => {
             reject(err);
           });
       });
-
-      // const stream = Body as Readable;
-      // stream
-      //   .pipe(csv())
-      //   .on("data", (data) => {
-      //     console.log("Parsed Record:", data);
-      //   })
-      //   .on("end", async () => {
-      //     console.log(`Processing completed for file: ${objectKey}`);
-      //
-      //     // ✅ Copy file to parsed/ folder
-      //     await s3Client.send(new CopyObjectCommand({
-      //       Bucket: bucketName,
-      //       CopySource: `${bucketName}/${objectKey}`,
-      //       Key: parsedKey,
-      //     }));
-      //
-      //     // ✅ Delete original file
-      //     await s3Client.send(new DeleteObjectCommand({ Bucket: bucketName, Key: objectKey }));
-      //     console.log(`File moved to ${parsedKey} and deleted from ${objectKey}`);
-      //   });
 
     } catch (error) {
       console.error("Error processing file:", error);

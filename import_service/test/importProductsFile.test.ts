@@ -1,13 +1,19 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { mockClient } from "aws-sdk-client-mock";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { handler } from "../lambdas/importProductsFile";
 
-const s3Mock = mockClient(S3Client);
+const s3Mock = mockClient(new S3Client());
 
 describe("importProductsFile Lambda", () => {
   beforeEach(() => {
     s3Mock.reset();
+    jest.clearAllMocks()
+    process.env.BUCKET_NAME = "test-bucket";
+    jest.mock('@aws-sdk/s3-request-presigner', () => ({
+      getSignedUrl: jest.fn(),
+    }));
   });
 
   const mockContext = {} as any;
@@ -20,7 +26,9 @@ describe("importProductsFile Lambda", () => {
       queryStringParameters: { name: "test.csv" },
     } as any;
 
-    // const response = await handler(event, mockContext, mockCallback);
+    const signedUrl = "https://mock-signed-url";
+    jest.fn(getSignedUrl).mockResolvedValueOnce(signedUrl);
+
     const response: APIGatewayProxyResult = await handler(event, mockContext, mockCallback) as APIGatewayProxyResult;
 
     const body = JSON.parse(response.body);
