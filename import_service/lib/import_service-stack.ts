@@ -29,8 +29,8 @@ export class ImportServiceStack extends cdk.Stack {
       handler: "importFileParser.handler",
       code: lambda.Code.fromAsset("./lambdas"),
       bundling: {
-        externalModules: [], // ✅ Ensure all dependencies are bundled
-        nodeModules: ["csv-parser"] // ✅ Include csv-parser in deployment package
+        externalModules: [],
+        nodeModules: ["csv-parser"]
       },
       environment: {
         IMPORT_BUCKET_NAME: importBucket.bucketName,
@@ -87,11 +87,4 @@ export class ImportServiceStack extends cdk.Stack {
       value: api.url,
     });
   }
-
-  // Create "uploaded" folder in the bucket (this happens dynamically when files are uploaded)
-  // new cdk.CfnOutput(this, 'ImportBucketName', {
-  //   value: importBucket.bucketName,
-  //   description: 'S3 bucket for file uploads',
-  // });
-  // }
 }
