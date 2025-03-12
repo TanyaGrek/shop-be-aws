@@ -1,0 +1,52 @@
+openapi: 3.0.0
+info:
+  title: Import Service API
+  description: API for importing product data via CSV files
+  version: 1.0.0
+
+servers:
+  - url: https://fr59ltuh83.execute-api.us-east-2.amazonaws.com/dev/
+    description: Development environment
+
+paths:
+  /import:
+    get:
+      summary: Generate a signed URL for CSV upload
+      description: Returns a signed URL for uploading CSV files to S3.
+      parameters:
+        - name: name
+          in: query
+          required: true
+          description: The name of the file to upload.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Signed URL generated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    description: The signed URL for uploading the CSV file.
+        "400":
+          description: Bad request - Missing file name.
+        "500":
+          description: Internal Server Error.
+      tags:
+        - Import
+
+components:
+  schemas:
+    SignedUrlResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          description: The pre-signed URL to upload a CSV file.
+
+tags:
+  - name: Import
+    description: File import service for products
