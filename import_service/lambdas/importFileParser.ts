@@ -5,11 +5,13 @@ import {
   CopyObjectCommand,
   DeleteObjectCommand
 } from '@aws-sdk/client-s3';
-import * as csv from "csv-parser";
+import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
+import csv from "csv-parser";
 import { Readable } from "stream";
 import { SdkStreamMixin } from '@smithy/types';
 
-const s3Client = new S3Client({ region: process.env.AWS_REGION || "us-east-1" });
+const s3Client = new S3Client({ region: process.env.AWS_REGION || "us-east-2" });
+const sqsClient = new SQSClient({ region: process.env.AWS_REGION|| "us-east-2" });
 
 export const handler: S3Handler = async (event: S3Event): Promise<void> => {
   console.log("Incoming S3 Event:", JSON.stringify(event, null, 2));
@@ -35,8 +37,18 @@ export const handler: S3Handler = async (event: S3Event): Promise<void> => {
 
         stream
           .pipe(csv())
-          .on("data", (data) => {
+          .on("data", async (data) => {
             console.log("Parsed Record:", data);
+
+            console.log("Sending record to SQS:", data);
+
+            const sqsMessage = new SendMessageCommand({
+              QueueUrl: process.env.SQS_URL!,
+              MessageBody: JSON.stringify(data),
+            });
+
+            await sqsClient.send(sqsMessage);
+
           })
           .on("end", async () => {
             console.log(`File ${objectKey} successfully processed.`);
