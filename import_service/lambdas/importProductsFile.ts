@@ -33,7 +33,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     return {
       statusCode: 200,
       headers: { "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({ url: signedUrl }),
+      body: signedUrl,
     };
   } catch (error) {
     console.error("Error generating signed URL:", error);
