@@ -7,12 +7,27 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3Notifications from "aws-cdk-lib/aws-s3-notifications";
 import * as lambdaNodejs from "aws-cdk-lib/aws-lambda-nodejs";
 import * as sqs from "aws-cdk-lib/aws-sqs";
+import * as iam from 'aws-cdk-lib/aws-iam';
 
 dotenv.config();
 
 export class ImportServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    // Import the Authorization Service stack
+    const authorizerLambda = lambda.Function.fromFunctionArn(
+      this,
+      'BasicAuthorizerLambda',
+      process.env.BASIC_AUTHORIZER_ARN!
+    );
+
+    // Create a Lambda Authorizer
+    const authorizer = new apigateway.TokenAuthorizer(this, 'ImportServiceAuthorizer', {
+      handler: authorizerLambda,
+      identitySource: apigateway.IdentitySource.header('Authorization'),
+      resultsCacheTtl: cdk.Duration.seconds(0),
+    });
 
     const importBucket = s3.Bucket.fromBucketName(this, "ImportBucket", "uploaded-files-ww");
 
@@ -73,15 +88,44 @@ export class ImportServiceStack extends cdk.Stack {
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: ["Content-Type", "Authorization"],
       },
       deployOptions: {
         stageName: 'dev',
       },
     });
 
+    // Enable CORS for 4XX and 5XX responses
+    api.addGatewayResponse("Default4XX", {
+      type: apigateway.ResponseType.DEFAULT_4XX,
+      responseHeaders: {
+        "Access-Control-Allow-Origin": "'*'",
+        "Access-Control-Allow-Methods": "'OPTIONS, GET, POST'",
+        "Access-Control-Allow-Headers": "'Authorization, Content-Type'",
+      },
+    });
+
+    api.addGatewayResponse("Default5XX", {
+      type: apigateway.ResponseType.DEFAULT_5XX,
+      responseHeaders: {
+        "Access-Control-Allow-Origin": "'*'",
+        "Access-Control-Allow-Methods": "'OPTIONS, GET, POST'",
+        "Access-Control-Allow-Headers": "'Authorization, Content-Type'",
+      },
+    });
+
+    // Grant Import Lambda permission to invoke Authorization Lambda
+    importProductsFile.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['lambda:InvokeFunction'],
+      resources: [process.env.BASIC_AUTHORIZER_ARN!],
+    }));
+
     // import endpoint
     const importResource = api.root.addResource("import");
     importResource.addMethod("GET", new apigateway.LambdaIntegration(importProductsFile), {
+      authorizer,
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
       requestParameters: {
         "method.request.querystring.name": true,
       },
@@ -90,6 +134,8 @@ export class ImportServiceStack extends cdk.Stack {
           statusCode: '200',
           responseParameters: {
             'method.response.header.Access-Control-Allow-Origin': true,
+            'method.response.header.Access-Control-Allow-Methods': true,
+            'method.response.header.Access-Control-Allow-Headers': true,
           },
         },
       ],
