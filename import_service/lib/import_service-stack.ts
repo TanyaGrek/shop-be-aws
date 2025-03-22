@@ -95,22 +95,39 @@ export class ImportServiceStack extends cdk.Stack {
       },
     });
 
-    // Enable CORS for 4XX and 5XX responses
-    api.addGatewayResponse("Default4XX", {
-      type: apigateway.ResponseType.DEFAULT_4XX,
+
+    const region = process.env.REGION!
+    const accountId = process.env.ACCOUNT_ID!
+    // Add permissions after authorizer is created. These will be associated with the authorizer through the sourceArn
+    new lambda.CfnPermission(this, "AuthorizerPermission", {
+      action: "lambda:InvokeFunction",
+      functionName: authorizerLambda.functionName,
+      principal: "apigateway.amazonaws.com",
+      sourceArn: `arn:aws:execute-api:${region}:${accountId}:${api.restApiId}/authorizers/*`,
+    });
+
+    // Add gateway responses for unauthorized and forbidden
+    api.addGatewayResponse("Unauthorized", {
+      type: apigateway.ResponseType.UNAUTHORIZED,
+      statusCode: "401",
       responseHeaders: {
         "Access-Control-Allow-Origin": "'*'",
-        "Access-Control-Allow-Methods": "'OPTIONS, GET, POST'",
-        "Access-Control-Allow-Headers": "'Authorization, Content-Type'",
+        "Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+      },
+      templates: {
+        "application/json": '{"message": "Unauthorized", "statusCode": 401}',
       },
     });
 
-    api.addGatewayResponse("Default5XX", {
-      type: apigateway.ResponseType.DEFAULT_5XX,
+    api.addGatewayResponse("Forbidden", {
+      type: apigateway.ResponseType.ACCESS_DENIED,
+      statusCode: "403",
       responseHeaders: {
         "Access-Control-Allow-Origin": "'*'",
-        "Access-Control-Allow-Methods": "'OPTIONS, GET, POST'",
-        "Access-Control-Allow-Headers": "'Authorization, Content-Type'",
+        "Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+      },
+      templates: {
+        "application/json": '{"message": "Forbidden", "statusCode": 403}',
       },
     });
 
