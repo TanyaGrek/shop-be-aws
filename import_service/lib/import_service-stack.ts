@@ -112,7 +112,7 @@ export class ImportServiceStack extends cdk.Stack {
       statusCode: "401",
       responseHeaders: {
         "Access-Control-Allow-Origin": "'*'",
-        "Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "Access-Control-Allow-Headers": "'*'",
       },
       templates: {
         "application/json": '{"message": "Unauthorized", "statusCode": 401}',
@@ -124,7 +124,7 @@ export class ImportServiceStack extends cdk.Stack {
       statusCode: "403",
       responseHeaders: {
         "Access-Control-Allow-Origin": "'*'",
-        "Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "Access-Control-Allow-Headers": "'*'",
       },
       templates: {
         "application/json": '{"message": "Forbidden", "statusCode": 403}',
