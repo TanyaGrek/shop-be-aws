@@ -16,7 +16,10 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     if (!fileName) {
       return {
         statusCode: 400,
-        headers: { "Access-Control-Allow-Origin": "*" },
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "Authorization, Content-Type",
+        },
         body: JSON.stringify({ message: "Missing 'name' query parameter" }),
       };
     }
@@ -32,15 +35,21 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
 
     return {
       statusCode: 200,
-      headers: { "Access-Control-Allow-Origin": "*" },
-      body: signedUrl,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Authorization, Content-Type",
+      },
+        body: signedUrl,
     };
   } catch (error) {
     console.error("Error generating signed URL:", error);
     return {
       statusCode: 500,
-      headers: { "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({ message: "Internal Server Error" }),
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Authorization, Content-Type",
+      },
+      body: JSON.stringify({ message: "Internal Server Error!!!" }),
     };
   }
 };

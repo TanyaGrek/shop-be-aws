@@ -7,12 +7,27 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3Notifications from "aws-cdk-lib/aws-s3-notifications";
 import * as lambdaNodejs from "aws-cdk-lib/aws-lambda-nodejs";
 import * as sqs from "aws-cdk-lib/aws-sqs";
+import * as iam from 'aws-cdk-lib/aws-iam';
 
 dotenv.config();
 
 export class ImportServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    // Import the Authorization Service stack
+    const authorizerLambda = lambda.Function.fromFunctionArn(
+      this,
+      'BasicAuthorizerLambda',
+      process.env.BASIC_AUTHORIZER_ARN!
+    );
+
+    // Create a Lambda Authorizer
+    const authorizer = new apigateway.TokenAuthorizer(this, 'ImportServiceAuthorizer', {
+      handler: authorizerLambda,
+      identitySource: apigateway.IdentitySource.header('Authorization'),
+      resultsCacheTtl: cdk.Duration.seconds(0),
+    });
 
     const importBucket = s3.Bucket.fromBucketName(this, "ImportBucket", "uploaded-files-ww");
 
@@ -73,15 +88,61 @@ export class ImportServiceStack extends cdk.Stack {
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
+        allowHeaders: ["Content-Type", "Authorization"],
       },
       deployOptions: {
         stageName: 'dev',
       },
     });
 
+
+    const region = process.env.REGION!
+    const accountId = process.env.ACCOUNT_ID!
+    // Add permissions after authorizer is created. These will be associated with the authorizer through the sourceArn
+    new lambda.CfnPermission(this, "AuthorizerPermission", {
+      action: "lambda:InvokeFunction",
+      functionName: authorizerLambda.functionName,
+      principal: "apigateway.amazonaws.com",
+      sourceArn: `arn:aws:execute-api:${region}:${accountId}:${api.restApiId}/authorizers/*`,
+    });
+
+    // Add gateway responses for unauthorized and forbidden
+    api.addGatewayResponse("Unauthorized", {
+      type: apigateway.ResponseType.UNAUTHORIZED,
+      statusCode: "401",
+      responseHeaders: {
+        "Access-Control-Allow-Origin": "'*'",
+        "Access-Control-Allow-Headers": "'*'",
+      },
+      templates: {
+        "application/json": '{"message": "Unauthorized", "statusCode": 401}',
+      },
+    });
+
+    api.addGatewayResponse("Forbidden", {
+      type: apigateway.ResponseType.ACCESS_DENIED,
+      statusCode: "403",
+      responseHeaders: {
+        "Access-Control-Allow-Origin": "'*'",
+        "Access-Control-Allow-Headers": "'*'",
+      },
+      templates: {
+        "application/json": '{"message": "Forbidden", "statusCode": 403}',
+      },
+    });
+
+    // Grant Import Lambda permission to invoke Authorization Lambda
+    importProductsFile.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['lambda:InvokeFunction'],
+      resources: [process.env.BASIC_AUTHORIZER_ARN!],
+    }));
+
     // import endpoint
     const importResource = api.root.addResource("import");
     importResource.addMethod("GET", new apigateway.LambdaIntegration(importProductsFile), {
+      authorizer,
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
       requestParameters: {
         "method.request.querystring.name": true,
       },
@@ -90,6 +151,8 @@ export class ImportServiceStack extends cdk.Stack {
           statusCode: '200',
           responseParameters: {
             'method.response.header.Access-Control-Allow-Origin': true,
+            'method.response.header.Access-Control-Allow-Methods': true,
+            'method.response.header.Access-Control-Allow-Headers': true,
           },
         },
       ],
